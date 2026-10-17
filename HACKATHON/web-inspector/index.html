@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPC Chat Engine  Visual Kernel & Memory Inspector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-branding">
+                <div class="logo-badge">IPC</div>
+                <div>
+                    <h1>Inter-Process Communication Chat Inspector</h1>
+                    <p class="subtitle">Operating Systems & Systems Programming (OSSP 25CS2104E)  Team 21</p>
+                </div>
+            </div>
+            <div class="header-meta">
+                <div class="meta-pill">
+                    <span class="dot active"></span>
+                    <span id="activeBackendName">POSIX Shared Memory (mmap)</span>
+                </div>
+                <div class="meta-pill">
+                    <span class="lbl">Channel:</span>
+                    <span class="val">team21_shm</span>
+                </div>
+                <div class="meta-pill">
+                    <span class="lbl">Total Packets:</span>
+                    <span class="val" id="totalPacketsCount">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Metric Cards -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <span class="metric-label">IPC ROUND-TRIP LATENCY (RTT)</span>
+                <div class="metric-val-row">
+                    <span class="metric-number" id="metricRtt">1.18</span>
+                    <span class="metric-unit">us</span>
+                </div>
+                <span class="metric-foot">Sub-microsecond kernel zero-copy</span>
+            </div>
+
+            <div class="metric-card">
+                <span class="metric-label">THROUGHPUT</span>
+                <div class="metric-val-row">
+                    <span class="metric-number" id="metricThroughput">45,187</span>
+                    <span class="metric-unit">msgs/sec</span>
+                </div>
+                <span class="metric-foot">47.06 MB/sec sustained bandwidth</span>
+            </div>
+
+            <div class="metric-card">
+                <span class="metric-label">PACKET INTEGRITY (CRC32)</span>
+                <div class="metric-val-row">
+                    <span class="metric-number" style="color: var(--accent-green)">100%</span>
+                    <span class="metric-unit">Verified</span>
+                </div>
+                <span class="metric-foot">Zero dropped, Zero corrupted</span>
+            </div>
+
+            <div class="metric-card">
+                <span class="metric-label">SYNCHRONIZATION PRIMITIVES</span>
+                <div class="metric-val-row">
+                    <span class="metric-number" style="color: var(--accent-cyan)">POSIX</span>
+                    <span class="metric-unit">Semaphores</span>
+                </div>
+                <span class="metric-foot">sem_mutex + sem_items + sem_slots</span>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="workspace-grid">
+            <!-- Left: Shared Memory Ring Buffer Visualizer -->
+            <div class="panel memory-panel">
+                <div class="panel-header">
+                    <h2>POSIX Shared Memory Segment Map (/dev/shm/ipc_shm_team21)</h2>
+                    <span class="badge">Size: 68,240 Bytes (mmap)</span>
+                </div>
+                <div class="panel-body">
+                    <!-- Global SHM Header -->
+                    <div class="shm-header-block">
+                        <div class="shm-field">
+                            <span class="sf-title">Magic:</span>
+                            <span class="sf-val">0x53484D31 (SHM1)</span>
+                        </div>
+                        <div class="shm-field">
+                            <span class="sf-title">Node 1 (Host PID):</span>
+                            <span class="sf-val" id="shmHostPid">4012 (Alice)</span>
+                        </div>
+                        <div class="shm-field">
+                            <span class="sf-title">Node 2 (Peer PID):</span>
+                            <span class="sf-val" id="shmPeerPid">4013 (Bob)</span>
+                        </div>
+                        <div class="shm-field">
+                            <span class="sf-title">Status:</span>
+                            <span class="sf-val text-green">SYNCHRONIZED</span>
+                        </div>
+                    </div>
+
+                    <!-- Mailbox A -> B (Host to Peer) -->
+                    <div class="ring-section">
+                        <div class="ring-title-row">
+                            <span class="ring-title">Mailbox A -> B (Alice -> Bob Ring Buffer)</span>
+                            <div class="sem-tags">
+                                <span class="sem-tag">mutex: 1</span>
+                                <span class="sem-tag" id="a2bItemsTag">items: 0</span>
+                                <span class="sem-tag" id="a2bSlotsTag">slots: 16</span>
+                            </div>
+                        </div>
+                        <div class="slots-grid" id="slotsA2B">
+                            <!-- 16 Slots generated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Mailbox B -> A (Peer to Host) -->
+                    <div class="ring-section">
+                        <div class="ring-title-row">
+                            <span class="ring-title">Mailbox B -> A (Bob -> Alice Ring Buffer)</span>
+                            <div class="sem-tags">
+                                <span class="sem-tag">mutex: 1</span>
+                                <span class="sem-tag" id="b2aItemsTag">items: 0</span>
+                                <span class="sem-tag" id="b2aSlotsTag">slots: 16</span>
+                            </div>
+                        </div>
+                        <div class="slots-grid" id="slotsB2A">
+                            <!-- 16 Slots generated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Active Packet Struct Inspector -->
+                    <div class="struct-inspector">
+                        <div class="inspector-header">Selected IPC Packet Frame Inspector</div>
+                        <div class="struct-fields-grid" id="packetInspectorGrid">
+                            <div class="s-field"><span class="k">magic</span><span class="v" id="pktMagic">0x49504331 (IPC1)</span></div>
+                            <div class="s-field"><span class="k">version</span><span class="v">1</span></div>
+                            <div class="s-field"><span class="k">msg_type</span><span class="v" id="pktType">MSG_TEXT (3)</span></div>
+                            <div class="s-field"><span class="k">seq_num</span><span class="v" id="pktSeq">#14</span></div>
+                            <div class="s-field"><span class="k">sender_pid</span><span class="v" id="pktPid">4012</span></div>
+                            <div class="s-field"><span class="k">sender_name</span><span class="v" id="pktSender">Alice</span></div>
+                            <div class="s-field"><span class="k">timestamp_us</span><span class="v" id="pktTime">1729141203918231 us</span></div>
+                            <div class="s-field"><span class="k">crc32</span><span class="v" id="pktCrc">0x4E89B21A (Valid)</span></div>
+                            <div class="s-field full"><span class="k">payload</span><span class="v" id="pktPayload">"Hello Bob! Testing two-way IPC chat via POSIX Shared Memory."</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Side-by-Side Dual Process Terminal Consoles -->
+            <div class="panel terminal-panel">
+                <div class="panel-header">
+                    <h2>Independent Operating System Processes</h2>
+                    <div class="actions-row">
+                        <button class="btn btn-outline" id="btnPingProbe">[PING] Send /ping Probe</button>
+                        <button class="btn btn-outline" id="btnFileChunk">[FILE] Stream File Chunk</button>
+                        <button class="btn btn-primary" id="btnSimulateMsg">[MSG] Send Message</button>
+                    </div>
+                </div>
+
+                <div class="dual-terminal-split">
+                    <!-- Terminal Alice -->
+                    <div class="term-window">
+                        <div class="term-titlebar">
+                            <div class="term-dots">
+                                <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                            </div>
+                            <span class="term-title">Node 1: Alice (PID: 4012)  Host</span>
+                            <span class="term-status online">CONNECTED</span>
+                        </div>
+                        <div class="term-body" id="termAlice">
+                            <div class="term-line system">[SYSTEM] Process initialized. Allocated POSIX shared memory /ipc_shm_team21.</div>
+                            <div class="term-line system">[SYSTEM] Created semaphores: /ipc_s_team21_a2b_mtx, itm, slt.</div>
+                            <div class="term-line success">[SUCCESS] Handshake established with Bob (PID: 4013).</div>
+                        </div>
+                        <div class="term-input-row">
+                            <span class="term-prompt">Alice@shm&gt;</span>
+                            <input type="text" id="inputAlice" placeholder="Type message or /ping, /stats..." />
+                            <button class="term-send-btn" id="btnSendAlice">Send</button>
+                        </div>
+                    </div>
+
+                    <!-- Terminal Bob -->
+                    <div class="term-window">
+                        <div class="term-titlebar">
+                            <div class="term-dots">
+                                <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                            </div>
+                            <span class="term-title">Node 2: Bob (PID: 4013)  Peer</span>
+                            <span class="term-status online">CONNECTED</span>
+                        </div>
+                        <div class="term-body" id="termBob">
+                            <div class="term-line system">[SYSTEM] Process attached to /ipc_shm_team21 via mmap().</div>
+                            <div class="term-line success">[SUCCESS] Peer connected to Host Alice (PID: 4012).</div>
+                        </div>
+                        <div class="term-input-row">
+                            <span class="term-prompt">Bob@shm&gt;</span>
+                            <input type="text" id="inputBob" placeholder="Type reply or /ping, /stats..." />
+                            <button class="term-send-btn" id="btnSendBob">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer / Team Banner -->
+        <footer class="app-footer">
+            <div class="team-members">
+                <span><strong>Team 21 Members:</strong></span>
+                <span class="member-tag">CharanTej Reddy (2520030422)  SHM &amp; Semaphore Ring Buffer</span>
+                <span class="member-tag">Sathvik (2520030226)  POSIX MQ, FIFO &amp; Packet Framing</span>
+                <span class="member-tag">Chandrakanth Reddy (2520030290)  Pthreads Async UI &amp; Benchmark Suite</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

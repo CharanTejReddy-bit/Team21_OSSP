@@ -1,0 +1,26 @@
+# Build artifacts
+bin/
+obj/
+*.o
+*.out
+*.exe
+
+# System & IPC temporary files
+/tmp/ipc_*
+/dev/shm/ipc_*
+/dev/shm/sem.ipc_*
+
+# Received files
+received_*
+sample_ipc_data.txt
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
